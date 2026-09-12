@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -404,13 +405,17 @@
     </div>
     <div class="two-col">
       <div class="field">
+        <label id="exposureDateLabel">Date of Exposure</label>
+        <input type="date" id="exposureDate">
+      </div>
+      <div class="field">
         <label id="exposureTimeLabel">Time of Exposure</label>
         <input type="time" id="exposureTime">
       </div>
-      <div class="field">
-        <label>Time Elapsed Since Exposure</label>
-        <input type="text" id="elapsed" placeholder="e.g. 2 hours">
-      </div>
+    </div>
+    <div class="field">
+      <label>Time Elapsed Since Exposure</label>
+      <input type="text" id="elapsed" placeholder="e.g. 2 hours">
     </div>
 
     <div class="section-title">History &amp; Physical Exam</div>
@@ -808,14 +813,17 @@ setupOtherToggle('hospitalUnit', 'hospitalUnitOther');
 setupOtherToggle('toxicologist', 'toxicologistOther');
 setupOtherToggle('substances', 'substancesOther');
 
-// Relabel "Time of Exposure" when withdrawal syndrome is selected
+// Relabel "Time of Exposure" / "Date of Exposure" when withdrawal syndrome is selected
 const substancesSelect = document.getElementById('substances');
 const exposureTimeLabel = document.getElementById('exposureTimeLabel');
+const exposureDateLabel = document.getElementById('exposureDateLabel');
 substancesSelect.addEventListener('change', function(){
   if(this.value === 'Substance use disorder withdrawal syndrome'){
     exposureTimeLabel.textContent = 'Last Time Substance Taken';
+    exposureDateLabel.textContent = 'Last Date Substance Taken';
   } else {
     exposureTimeLabel.textContent = 'Time of Exposure';
+    exposureDateLabel.textContent = 'Date of Exposure';
   }
 });
 
@@ -955,6 +963,7 @@ document.getElementById('submitBtn').addEventListener('click', async function(){
     ['Patient ID/MRN', 'patientId'], ['Age', 'age'], ['Sex', 'sex'], ['Weight (kg)', 'weight'],
     ['Governorate', 'governorate'], ['Wilayat', 'wilayat'],
     ['Substances Involved', null, substancesVal], ['Route of Exposure', 'route'], ['Reason for Exposure', 'reason'],
+    [document.getElementById('exposureDateLabel').textContent, 'exposureDate'],
     [document.getElementById('exposureTimeLabel').textContent, 'exposureTime'], ['Time Elapsed', 'elapsed'],
     ['Presenting Symptoms', 'symptoms'],
     ['Heart Rate', 'hr'], ['Blood Pressure', 'bp'], ['Resp. Rate', 'rr'],
