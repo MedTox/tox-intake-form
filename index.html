@@ -170,48 +170,59 @@
     color:var(--text);
   }
   #resetBtn:hover{background:#e2e6ea;}
-  #summary{
+
+  /* Confirmation popup */
+  #confirmOverlay{
     display:none;
-    margin:0 26px 24px 26px;
-    padding:14px 16px;
-    background:#f0fdf9;
-    border:1px solid #99e6d9;
-    border-radius:8px;
-    font-size:13px;
-    line-height:1.6;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,0.55);
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+    padding:20px;
   }
-  #summary h3{
-    margin:0 0 8px 0;
-    font-size:13px;
+  #confirmBox{
+    background:#fff;
+    border-radius:12px;
+    max-width:360px;
+    width:100%;
+    padding:30px 26px;
+    text-align:center;
+    box-shadow:0 12px 32px rgba(0,0,0,0.28);
+  }
+  #confirmBox .icon{
+    font-size:42px;
+    line-height:1;
+    margin-bottom:12px;
+  }
+  #confirmBox h2{
+    margin:0 0 10px 0;
+    font-size:17px;
     color:var(--navy);
   }
-  #summary table{
-    width:100%;
-    border-collapse:collapse;
-  }
-  #summary td{
-    padding:3px 0;
-    vertical-align:top;
-  }
-  #summary td.k{
-    color:var(--muted);
-    width:42%;
-    padding-right:8px;
-  }
-  #summary td.v{
-    font-weight:600;
+  #confirmBox p{
+    margin:0 0 8px 0;
+    font-size:13.5px;
     color:var(--text);
-    white-space:pre-wrap;
+    line-height:1.5;
   }
-  .copyBtn{
-    margin-top:10px;
-    background:var(--accent);
+  #confirmSerial{
+    margin:10px 0 18px 0 !important;
+    font-size:14px;
+    font-weight:700;
+    color:var(--accent);
+  }
+  #confirmCloseBtn{
+    background:var(--navy);
     color:#fff;
-    padding:8px 12px;
-    font-size:12.5px;
-    border-radius:6px;
     border:none;
+    border-radius:6px;
+    padding:11px 18px;
+    font-size:13.5px;
+    font-weight:600;
     cursor:pointer;
+    width:100%;
   }
 </style>
 </head>
@@ -713,7 +724,17 @@
     <button type="button" id="submitBtn">Submit Entry</button>
   </div>
 
-  <div id="summary"></div>
+</div>
+
+<!-- Confirmation popup -->
+<div id="confirmOverlay">
+  <div id="confirmBox">
+    <div class="icon">✅</div>
+    <h2>Submission Received</h2>
+    <p id="confirmMessage">Your teleconsult entry has been submitted successfully.</p>
+    <p id="confirmSerial"></p>
+    <button id="confirmCloseBtn">Submit Another</button>
+  </div>
 </div>
 
 <script>
@@ -1161,23 +1182,6 @@ document.getElementById('submitBtn').addEventListener('click', async function(){
     ['ED Outcome', 'edOutcome']
   ];
 
-  let rows = `<tr><td class="k">Serial No.</td><td class="v" style="color:var(--accent);">${serialNo}</td></tr>`;
-  let textLines = ['Serial No.: ' + serialNo];
-  fields.forEach(([label, id, directVal]) => {
-    const val = (directVal !== undefined ? directVal : document.getElementById(id).value) || '—';
-    rows += `<tr><td class="k">${label}</td><td class="v">${val}</td></tr>`;
-    textLines.push(label + ': ' + val);
-  });
-
-  const summaryDiv = document.getElementById('summary');
-  summaryDiv.style.display = 'block';
-  summaryDiv.innerHTML = `
-    <h3>Toxicology Teleconsult Summary</h3>
-    <table>${rows}</table>
-    <p id="sheetStatus" style="margin:10px 0 0 0; font-weight:600; color:var(--muted);">Saving to Google Sheet…</p>
-    <button class="copyBtn" id="copyBtn">Copy as text</button>
-  `;
-
   // Build a label->value object and push it to the Google Sheet webhook
   const sheetData = { 'Serial No.': serialNo, '_secret': SHARED_SECRET };
   fields.forEach(([label, id, directVal]) => {
@@ -1193,35 +1197,41 @@ document.getElementById('submitBtn').addEventListener('click', async function(){
     sheetData['_images'] = allPhotos;
   }
 
-  const sheetStatus = document.getElementById('sheetStatus');
+  const overlay = document.getElementById('confirmOverlay');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const confirmSerial = document.getElementById('confirmSerial');
+
   if(SHEET_WEBHOOK_URL.includes('PASTE_YOUR')){
-    sheetStatus.textContent = '⚠ Google Sheet not connected yet (set SHEET_WEBHOOK_URL)';
-    sheetStatus.style.color = '#b45309';
+    confirmMessage.textContent = 'Form is not yet connected to a Google Sheet — this entry was NOT saved. Please contact your administrator.';
+    confirmSerial.textContent = '';
   } else {
     try {
       await saveToGoogleSheet(sheetData);
-      sheetStatus.textContent = 'Saved to Google Sheet ✓';
-      sheetStatus.style.color = 'var(--accent)';
+      confirmMessage.textContent = 'Your teleconsult entry has been submitted successfully.';
+      confirmSerial.textContent = 'Serial No.: ' + serialNo;
     } catch(err){
-      sheetStatus.textContent = '⚠ Could not save to Google Sheet (check connection)';
-      sheetStatus.style.color = '#b45309';
+      confirmMessage.textContent = 'There may have been an issue saving this submission. Please check your connection and try again if needed.';
+      confirmSerial.textContent = 'Serial No.: ' + serialNo;
     }
   }
 
-  document.getElementById('copyBtn').addEventListener('click', function(){
-    navigator.clipboard.writeText(textLines.join('\n')).then(()=>{
-      this.textContent = 'Copied!';
-      setTimeout(()=>{ this.textContent = 'Copy as text'; }, 1500);
-    });
-  });
-
-  summaryDiv.scrollIntoView({behavior:'smooth'});
+  overlay.style.display = 'flex';
   getNextSerialPreview();
+});
+
+document.getElementById('confirmCloseBtn').addEventListener('click', function(){
+  document.getElementById('confirmOverlay').style.display = 'none';
+  document.getElementById('toxForm').reset();
+  hospitalSelect.innerHTML = '<option value="" disabled selected>Select region first</option>';
+  wilayatSelect.innerHTML = '<option value="" disabled selected>Select governorate first</option>';
+  medPhotosInput.value = '';
+  sitePhotosInput.value = '';
+  ekgPhotosInput.value = '';
+  imagingPhotosInput.value = '';
 });
 
 document.getElementById('resetBtn').addEventListener('click', function(){
   document.getElementById('toxForm').reset();
-  document.getElementById('summary').style.display = 'none';
   hospitalSelect.innerHTML = '<option value="" disabled selected>Select region first</option>';
   wilayatSelect.innerHTML = '<option value="" disabled selected>Select governorate first</option>';
   medPhotosInput.value = '';
